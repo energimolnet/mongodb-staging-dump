@@ -10,22 +10,12 @@
 namespace MongoStageDump;
 
 
-class Dumper {
+class Dumper extends Base {
 
-    private $_db;
-    private $_conn;
 
-    public function __construct()
-    {
-        $connection_string = getenv("MONGOLAB_URI_ENERGIMOLNET_PRODUCTION");
-        $parsed = $this->parseConnectionString($connection_string);
-        $this->_conn = new \MongoClient($connection_string);
 
-        if (empty($parsed['database']))
-            throw new \Exception("You must include a database in the connection string.");
+    private $_dump_queries = [];
 
-        $this->_db = $this->_conn->selectDB($parsed['database']);
-    }
 
     /**
      * @return \MongoDB
@@ -47,7 +37,7 @@ class Dumper {
      *
      */
 
-    private function getCollections()
+    public function getCollections()
     {
         return $this->getDb()->listCollections();
     }
@@ -65,7 +55,7 @@ class Dumper {
 
     public function setDumpQuery($collection, $query)
     {
-
+        $this->_dump_queries[$collection] = $query;
     }
 
     /**
@@ -79,49 +69,70 @@ class Dumper {
 
     }
 
+
+
+    public function dumpCollection($collection)
+    {
+        $time = microtime(true);
+
+        $command = "mongodump " .
+        "--host {$this->getSecondaryHost()} " .
+        "--username {$this->_username} " .
+        "--password {$this->_password} " .
+        "--db {$this->_database} " .
+        "--collection {$collection} " .
+        "--out {$this->getTempDir()} ";
+
+        if (isset($this->_dump_queries[$collection])){
+            $json_query = json_encode($this->_dump_queries[$collection]);
+            $pattern = '/\{"\$id":(".{24}")\}/i';
+            $replacement = 'ObjectId(${1})';
+            $javascript_json = addslashes(preg_replace($pattern, $replacement, $json_query));
+            $command .= "--query \"$javascript_json\" ";
+        }
+
+
+        $output = "";
+        $errors = "";
+        if ($this->cmd($command, $output, $errors)){
+            $elapsed = microtime(true) - $time;
+            $this->log("Dumped collection $collection in $elapsed seconds");
+            return "{$this->getTempDir()}/$this->_database";
+        }else{
+            throw new \Exception("There was an error executing the command: \n\n$errors");
+        }
+
+    }
+
+
+
     /**
      * Will limit the dump to the last X rows of the collection.
      * Good to use for dumping parts of queues and logs.
      *
      * @param $collection
-     * @param $limit
+     * @param $limit how many last documents to dump
      */
+
     public function setLimit($collection, $limit)
     {
-        # TODO: http://stackoverflow.com/questions/7828817/is-it-possible-to-mongodump-the-last-x-records-from-a-collection
-    }
+        $cursor = $this->getDb()->selectCollection($collection)->find();
+        $count = $cursor->count();
 
-    public function parseConnectionString($connectionString)
-    {
-        $pattern = '(^mongodb://' .
-            '(?:([^:]*):([^@]*)@)?' . # [username:password@]
-            '([^/]*)' . # host1[:port1][,host2[:port2],...[,hostN[:portN]]]
-            '(?:' .
-            '/([^?]*)' . # /[database]
-            '(?:[?](.*))?' . # [?options]
-            ')?' .
-            '$)';
-        preg_match($pattern, $connectionString, $result);
+        if ($count>0){
+            if ($count - $limit < 0)
+                $limit = $count;
+            $cursor->skip($count - $limit);
+            $cursor->sort(['_id' => 1]);
+            $cursor->limit(1);
+            foreach ($cursor as $doc)
+                $doc_id = $doc['_id'];
 
-        $result =  array(
-            'username' => isset($result[1]) ? $result[1] : null,
-            'password' => isset($result[2]) ? $result[2] : null,
-            'host' => isset($result[3]) ? $result[3] : null,
-            'database' => isset($result[4]) ? $result[4] : null,
-            'options' => isset($result[5]) ? $result[5] : null,
-        );
-
-        $result['options'] = explode("&", $result['options']);
-        foreach ($result['options'] as $key => &$param){
-            $tmp = explode("=" , $param);
-            if (count($tmp) == 2){
-                $param = array($tmp[0] => $tmp[1]);
-                $result['options'][$tmp[0]] = $tmp[1];
-            }
-            unset($result['options'][$key]);
+            if (!empty($doc_id))
+                $this->setDumpQuery($collection, ['_id' => ['$gte' => $doc_id]]);
+            else
+                throw new \Exception("No documents foun");
         }
-
-        return $result;
-
     }
+
 }

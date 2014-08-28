@@ -19,13 +19,3 @@ require 'vendor/autoload.php';
  * Any code that should be run with this script
  */
 
-$dump = new \MongoStageDump\Dumper();
-
-$meters = [
-    new MongoId(""),
-    new MongoId(""),
-    new MongoId(""),
-    new MongoId(""),
-];
-
-$dump->setDumpQuery('volumes', ['meter_id' => ['$in' => [$meters]]]);
