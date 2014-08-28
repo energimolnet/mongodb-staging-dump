@@ -131,7 +131,7 @@ class Dumper extends Base {
             if (!empty($doc_id))
                 $this->setDumpQuery($collection, ['_id' => ['$gte' => $doc_id]]);
             else
-                throw new \Exception("No documents foun");
+                throw new \Exception("No documents found");
         }
     }
 

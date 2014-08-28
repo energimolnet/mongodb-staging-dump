@@ -2,3 +2,5 @@ config.json
 iron.json
 vendor/
 .idea/
+mongodump
+mongorestore

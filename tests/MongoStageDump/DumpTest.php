@@ -28,7 +28,8 @@ class DumpTest extends \PHPUnit_Framework_TestCase {
         foreach ($dump->getCollections() as $collection)
         {
             /* @var $collection \MongoCollection */
-            if (in_array($collection->getName(), ['volumes','readings'])){
+
+            if (!in_array($collection->getName(), ['volumes','readings'])){
                 $path = $dump->dumpCollection($collection->getName());
                 $restore->restoreCollection( $collection->getName(), $path);
             }
@@ -39,14 +40,7 @@ class DumpTest extends \PHPUnit_Framework_TestCase {
          */
 
         $cursor = $dump->getDb()->selectCollection('contracts')->find([
-            'username' => ['$in' =>
-                [
-                    'magnus.frisell@partillebo.se',
-                    'luttkens@gmail.com',
-                    'tomas.lenander@brostaden.se',
-                    'falbygden@playbackenergy.se'
-                ]
-            ],
+            'user_username' => ['$in' => $config['users']],
         ]);
 
         foreach ($cursor as $doc)

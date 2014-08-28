@@ -73,7 +73,7 @@ class Base {
             2 => array("pipe", "w"),  // stderr
         );
 
-        $process = proc_open($cmd, $descriptorspec, $pipes, dirname(__FILE__), null);
+        $process = proc_open($cmd, $descriptorspec, $pipes, "./", null);
         $stdout = stream_get_contents($pipes[1]);
         fclose($pipes[1]);
         $stderr = stream_get_contents($pipes[2]);

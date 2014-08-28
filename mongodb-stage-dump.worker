@@ -4,7 +4,11 @@ stack "php-5.4"
 
 # Include all files
 file "iron.json"
+file "iron.json"
 dir "."
+
+
+
 
 # exec is the file that will be executed:
 exec "index.php"
