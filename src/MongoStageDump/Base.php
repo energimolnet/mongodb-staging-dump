@@ -45,7 +45,6 @@ class Base {
 
     protected function getTempDir()
     {
-        return "D:/temp/dump/";
         return sys_get_temp_dir();
     }
 
