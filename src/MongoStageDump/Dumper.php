@@ -75,29 +75,30 @@ class Dumper extends Base {
     {
         $time = microtime(true);
 
+        $tmp_dir = $this->getTempDir();
+
         $command = "mongodump " .
         "--host {$this->getSecondaryHost()} " .
         "--username {$this->_username} " .
         "--password {$this->_password} " .
         "--db {$this->_database} " .
         "--collection {$collection} " .
-        "--out {$this->getTempDir()} ";
+        "--out {$tmp_dir} ";
 
         if (isset($this->_dump_queries[$collection])){
-            $json_query = json_encode($this->_dump_queries[$collection]);
-            $pattern = '/\{"\$id":(".{24}")\}/i';
-            $replacement = 'ObjectId(${1})';
-            $javascript_json = addslashes(preg_replace($pattern, $replacement, $json_query));
-            $command .= "--query \"$javascript_json\" ";
+            $json_query = \MongoJson::strict($this->_dump_queries[$collection]);
+            $this->log("--query '$json_query' ");
+            $command .= "--query '$json_query' ";
         }
+
 
 
         $output = "";
         $errors = "";
         if ($this->cmd($command, $output, $errors)){
             $elapsed = microtime(true) - $time;
-            $this->log("Dumped collection $collection in $elapsed seconds");
-            return "{$this->getTempDir()}/$this->_database";
+            $this->log("Dumped collection $collection to $tmp_dir in $elapsed seconds");
+            return "{$tmp_dir}/$this->_database";
         }else{
             throw new \Exception("There was an error executing the command: \n\n$errors");
         }
