@@ -3,7 +3,8 @@
     "description":"Owner Connections Woker for Energimolnet",
     "keywords":[],
     "require": {
-        "monolog/monolog": "1.0.*"
+        "monolog/monolog": "1.0.*",
+        "mtrbean/mongo-json": "1.*"
     },
     "autoload": {
         "psr-0": { "MongoStageDump": "src/" }
