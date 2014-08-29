@@ -30,6 +30,8 @@ class Restore extends Base {
     public function restoreCollection($collection, $path, $drop = true)
     {
         $time = microtime(true);
+        $collection_filepath = "$path/$collection.bson";
+        $this->log("Restore file $collection_filepath (" . filesize($collection_filepath) .")");
         $command = "mongorestore " .
             "--host {$this->getPrimaryHost()} " .
             "--username {$this->_username} " .
@@ -37,7 +39,7 @@ class Restore extends Base {
             "--collection $collection " .
             ($drop ? "--drop " : "") .
             "--db {$this->_database} " .
-            "$path/$collection.bson ";
+            "$collection_filepath ";
 
         $output = "";
         $errors = "";
