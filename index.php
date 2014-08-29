@@ -1,6 +1,7 @@
 <?php
 
 exec("chmod +x ./mongodump");
+exec("chmod +x ./mongorestore");
 
 /*
  * Set environmental variables based on config
@@ -42,10 +43,12 @@ foreach ($dump->getCollections() as $collection)
 /*
  * Dump volumes for certain users
  */
-
-$cursor = $dump->getDb()->selectCollection('contracts')->find([
+$query = [
     'user_username' => ['$in' => $args['config']['users']],
-]);
+];
+echo "Limits consumption dump contracts matching: " . json_encode($query)."\n";
+
+$cursor = $dump->getDb()->selectCollection('contracts')->find($query);
 
 foreach ($cursor as $doc)
     $meters[] = $doc['meter_id'];
@@ -56,13 +59,15 @@ foreach ($cursor as $doc)
  * documents.
  */
 
+echo "Dumping consumptions for " . count($meters) ." meters\n";
+
 $chunk_size = 200;
 for ($i=0;$i<count($meters);$i=$i+$chunk_size){
     $dump->setDumpQuery('volumes', ['meter_id' => ['$in' => array_slice($meters, $i, $chunk_size)]]);
     $path = $dump->dumpCollection('volumes');
-    $restore->restoreCollection('volumes', $path,false);
+    $restore->restoreCollection('volumes', $path, $i == 0);
 
     $dump->setDumpQuery('readings', ['meter_id' => ['$in' => array_slice($meters, $i, $chunk_size)]]);
     $path = $dump->dumpCollection('readings');
-    $restore->restoreCollection('readings', $path, false);
+    $restore->restoreCollection('readings', $path, $i == 0);
 }
