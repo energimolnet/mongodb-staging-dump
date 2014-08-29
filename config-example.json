@@ -1,0 +1,6 @@
+{
+    "ENV" : {
+        "MONGOLAB_URI_ENERGIMOLNET_PRODUCTION": "",
+        "MONGOLAB_URI_ENERGIMOLNET_STAGE": ""
+    }
+}
