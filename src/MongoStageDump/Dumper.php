@@ -112,28 +112,23 @@ class Dumper extends Base {
      * Good to use for dumping parts of queues and logs.
      *
      * @param $collection
-     * @param $limit how many last documents to dump
+     * @param $limit int how many last documents to dump
      */
 
     public function setLimit($collection, $limit)
     {
         $cursor = $this->getDb()->selectCollection($collection)->find();
-        $count = $cursor->count();
+        $cursor->skip($limit);
+        $cursor->sort(['_id' => -1]);
+        $cursor->limit(1);
+        foreach ($cursor as $doc)
+            $doc_id = $doc['_id'];
 
-        if ($count>0){
-            if ($count - $limit < 0)
-                $limit = $count;
-            $cursor->skip($count - $limit);
-            $cursor->sort(['_id' => 1]);
-            $cursor->limit(1);
-            foreach ($cursor as $doc)
-                $doc_id = $doc['_id'];
+        if (!empty($doc_id))
+            $this->setDumpQuery($collection, ['_id' => ['$gte' => $doc_id]]);
+        else
+            throw new \Exception("No documents found");
 
-            if (!empty($doc_id))
-                $this->setDumpQuery($collection, ['_id' => ['$gte' => $doc_id]]);
-            else
-                throw new \Exception("No documents found");
-        }
     }
 
 }
